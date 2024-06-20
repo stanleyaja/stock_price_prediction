@@ -113,14 +113,14 @@ def view_predict():
             # Display the prediction results
             # Load the model based on the ticker
             if ticker == "BBCA.JK":
-                lstm_model = load_model("models/BBCA_LSTM_window_5.h5")
-                gru_model = load_model("models/BBCA_GRU_window_5.h5")
+                lstm_model = load_model("saved_models/BBCA_LSTM_window_5.h5")
+                gru_model = load_model("saved_models/BBCA_GRU_window_5.h5")
             elif ticker == "BBRI.JK":
-                lstm_model = load_model("models/BBRI_LSTM_window_5.h5")
-                gru_model = load_model("models/BBRI_GRU_window_5.h5")
+                lstm_model = load_model("saved_models/BBRI_LSTM_window_5.h5")
+                gru_model = load_model("saved_models/BBRI_GRU_window_5.h5")
             elif ticker == "BMRI.JK":
-                lstm_model = load_model("models/BMRI_LSTM_window_5.h5")
-                gru_model = load_model("models/BMRI_GRU_window_5.h5")
+                lstm_model = load_model("saved_models/BMRI_LSTM_window_5.h5")
+                gru_model = load_model("saved_models/BMRI_GRU_window_5.h5")
 
             # Make predictions using the loaded model
             lstm_pred = lstm_model.predict(X_test[:selected_periods])
