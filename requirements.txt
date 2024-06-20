@@ -4,5 +4,4 @@ plotly==5.22.0
 streamlit==1.34.0
 streamlit_option_menu==0.3.13
 tensorflow==2.12.0
-tensorflow_intel
 yfinance==0.2.40
