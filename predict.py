@@ -172,14 +172,16 @@ def view_predict():
             lstm_mape = np.mean(np.abs((test_df['Close'] - test_df['lstm_pred']) / test_df['Close'])) * 100
             gru_mape = np.mean(np.abs((test_df['Close'] - test_df['gru_pred']) / test_df['Close'])) * 100
 
+            # st.write("LSTM model error percentage:", round(lstm_mape, 4), "%")
+            # st.write("GRU model error percentage:", round(gru_mape, 4), "%")
+            st.markdown(f"LSTM model error percentage: <span style='color: green; background-color: none;'>{round(lstm_mape, 4)}%</span>", unsafe_allow_html=True)
+            st.markdown(f"GRU model error percentage: <span style='color: red; background-color: none;'>{round(gru_mape, 4)}%</span>", unsafe_allow_html=True)
+            
             if lstm_mape < gru_mape:
                 st.write("**LSTM** model makes more accurate prediction compared to **GRU** model based on the model's error percentage.")
             else:
                 st.write("**GRU** model makes more accurate prediction compared to **LSTM** model based on the model's error percentage.")
-            st.write("LSTM model error percentage:", round(lstm_mape, 4), "%")
-            st.write("GRU model error percentage:", round(gru_mape, 4), "%")
             st.caption("Note: These error percentages are the deviation of the predicted price from the actual price.")
-            
 
             time.sleep(3)
             alert.empty()
