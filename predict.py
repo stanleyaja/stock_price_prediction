@@ -60,7 +60,7 @@ def view_predict():
         'BMRI': 'BMRI.JK',
     }
     # Get the user input for the stock ticker
-    ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), index=0)]
+    ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), index=0, help="Select the stock ticker to predict the stock price.")]
 
     test_df = currentdata(ticker, start_date, end_date)
     train_df = currentdata(ticker, start_train, end_train)
@@ -96,7 +96,7 @@ def view_predict():
         if st.session_state.show_data:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=train_df.index, y=train_df['Close'], mode='lines', name='Actual Price', line=dict(color='blue', width=1.5, dash='solid')))
-            fig.update_layout(title='Price Visualization (2019 - 2024) for {stock}'.format(stock=stock),
+            fig.update_layout(title='Price Visualization (January 2019 - December 2023) for {stock}'.format(stock=stock),
                         xaxis_title='Date',
                         yaxis_title='Price')
             st.plotly_chart(fig)
@@ -173,11 +173,13 @@ def view_predict():
             gru_mape = np.mean(np.abs((test_df['Close'] - test_df['gru_pred']) / test_df['Close'])) * 100
 
             if lstm_mape < gru_mape:
-                st.write("**LSTM** model makes more accurate prediction compared to **GRU** model based on the model's error rate.")
+                st.write("**LSTM** model makes more accurate prediction compared to **GRU** model based on the model's error percentage.")
             else:
-                st.write("**GRU** model makes more accurate prediction compared to **LSTM** model based on the model's error rate.")
-            st.write("LSTM model error rate", lstm_mape)
-            st.write("GRU model error rate:", gru_mape)
+                st.write("**GRU** model makes more accurate prediction compared to **LSTM** model based on the model's error percentage.")
+            st.write("LSTM model error percentage:", round(lstm_mape, 4), "%")
+            st.write("GRU model error percentage:", round(gru_mape, 4), "%")
+            st.caption("Note: These error percentages are the deviation of the predicted price from the actual price.")
+            
 
             time.sleep(3)
             alert.empty()
