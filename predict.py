@@ -59,129 +59,152 @@ def view_predict():
         'BBRI': 'BBRI.JK',
         'BMRI': 'BMRI.JK',
     }
+
+    # if 'ticker' not in st.session_state:
+    #     st.session_state.selected_ticker = ""
+
     # Get the user input for the stock ticker
-    ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), index=0, help="Select the stock ticker to predict the stock price.")]
+    selected_ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), help="Select the stock ticker to predict the stock price.")]
+    
+    def button_ticker_visibility():
+        st.session_state.ticker_selected = True
 
-    test_df = currentdata(ticker, start_date, end_date)
-    train_df = currentdata(ticker, start_train, end_train)
+    if 'ticker_selected' not in st.session_state:
+        st.session_state.ticker_selected = False
 
-    close_test = test_df['Close'].values
-    X_test, y_test = create_windows_horizons(close_test, window_size, horizon)
+    if not st.session_state.ticker_selected:
+        st.session_state.selected_ticker = selected_ticker
 
-    if ticker:
-        # Fetch the stock data
-        data = get_stock_data(ticker)
-
-        # st.subheader("Stock Data")
-        st.caption("Click to show/hide history data visualization.")
-
-        # Toggle the show_data state
-        def toggle_data_visibility():
-            st.session_state.show_data = not st.session_state.show_data
-
-        if 'show_data' not in st.session_state:
-            st.session_state.show_data = False
-
-        button_label = "Hide Graph" if st.session_state.show_data else "Show Graph"
-        if st.button(button_label, on_click=toggle_data_visibility):
+    if not st.session_state.ticker_selected:
+        if st.button("Set Ticker", on_click=button_ticker_visibility):
             pass
-        
-        if ticker == "BBCA.JK":
-            stock = "PT Bank Central Asia Tbk (BBCA)"
-        elif ticker == "BBRI.JK":
-            stock = "PT Bank Rakyat Indonesia Tbk (BBRI)"
-        elif ticker == "BMRI.JK":
-            stock = "PT Bank Mandiri Tbk (BMRI)"
 
-        if st.session_state.show_data:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=train_df.index, y=train_df['Close'], mode='lines', name='Actual Price', line=dict(color='blue', width=1.5, dash='solid')))
-            fig.update_layout(title='Price Visualization (January 2019 - December 2023) for {stock}'.format(stock=stock),
-                        xaxis_title='Date',
-                        yaxis_title='Price')
-            st.plotly_chart(fig)
+    # Check if ticker is set in session state before proceeding
+    if st.session_state.ticker_selected:
+        ticker = st.session_state.selected_ticker  # Use the ticker from session state
+        test_df = currentdata(ticker, start_date, end_date)
+        train_df = currentdata(ticker, start_train, end_train)
+
+        close_test = test_df['Close'].values
+        X_test, y_test = create_windows_horizons(close_test, window_size, horizon)
+
+        if ticker:
+            # Fetch the stock data
+            data = get_stock_data(ticker)
+
+            # st.subheader("Stock Data")
+            st.caption("Click to show/hide history data visualization.")
+
+            # Toggle the show_data state
+            def toggle_data_visibility():
+                st.session_state.show_data = not st.session_state.show_data
+
+            if 'show_data' not in st.session_state:
+                st.session_state.show_data = False
+
+            button_label = "Hide Graph" if st.session_state.show_data else "Show Graph"
+            if st.button(button_label, on_click=toggle_data_visibility):
+                pass
             
-
-        # total_days = (end - start).days
-        total_days = len(data)-5
-        selected_periods = st.slider("Periods (days)", 2, total_days, 20, help="Select the number of days to predict the stock price.")
-        
-        st.caption(f"Stock: :blue[{stock}]")
-        st.caption(f"Prediction date: :blue[{(test_df.index[5]).strftime('%d-%m-%Y')}] until :blue[{(test_df.index[4 + selected_periods]).strftime('%d-%m-%Y')}]")
-        
-        if st.button("Predict"):
-            # Display the prediction results
-            # Load the model based on the ticker
             if ticker == "BBCA.JK":
-                lstm_model = load_model("saved_models/BBCA_LSTM_window_5.h5")
-                gru_model = load_model("saved_models/BBCA_GRU_window_5.h5")
+                stock = "PT Bank Central Asia Tbk (BBCA)"
             elif ticker == "BBRI.JK":
-                lstm_model = load_model("saved_models/BBRI_LSTM_window_5.h5")
-                gru_model = load_model("saved_models/BBRI_GRU_window_5.h5")
+                stock = "PT Bank Rakyat Indonesia Tbk (BBRI)"
             elif ticker == "BMRI.JK":
-                lstm_model = load_model("saved_models/BMRI_LSTM_window_5.h5")
-                gru_model = load_model("saved_models/BMRI_GRU_window_5.h5")
+                stock = "PT Bank Mandiri Tbk (BMRI)"
 
-            # Make predictions using the loaded model
-            lstm_pred = lstm_model.predict(X_test[:selected_periods])
-            gru_pred = gru_model.predict(X_test[:selected_periods])
-            
-            test_df = test_df.iloc[5:selected_periods+5]
-
-            lstm_pred_df = pd.DataFrame(lstm_pred, columns=['lstm_pred'])
-            gru_pred_df = pd.DataFrame(gru_pred, columns=['gru_pred'])
-
-            test_df['lstm_pred'] = lstm_pred_df.values
-            test_df['gru_pred'] = gru_pred_df.values
-            test_df = test_df.dropna(subset=['lstm_pred'])
-
-            with st.spinner("Predicting..."):
-                time.sleep(3)
-            alert = st.success("Prediction completed!")
-
-            # Create a Plotly figure
-            fig = go.Figure()
-            if selected_periods > 60:
-                width = 1
-            elif selected_periods > 30:
-                width = 1.5
-            else:
-                width = 2
-            
-            fig.add_trace(go.Scatter(x=test_df.index, y=test_df['Close'], mode='lines', name='Actual Price', line=dict(color='blue', width=width, dash='solid')))
-            fig.add_trace(go.Scatter(x=test_df.index, y=test_df['lstm_pred'], mode='lines', name='LSTM Prediction', line=dict(color='green', width=width, dash='dashdot')))
-            fig.add_trace(go.Scatter(x=test_df.index, y=test_df['gru_pred'], mode='lines', name='GRU Prediction', line=dict(color='red', width=width, dash='dot')))
-            
-            # Customize the layout
-            fig.update_layout(title='Price Prediction for {stock}'.format(stock=stock),
+            if st.session_state.show_data:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=train_df.index, y=train_df['Close'], mode='lines', name='Actual Price', line=dict(color='blue', width=1.5, dash='solid')))
+                fig.update_layout(title=f'Price Visualization (January 1, 2019 - December 29, 2023) for {stock}'.format(stock=stock),
                             xaxis_title='Date',
-                            yaxis_title='Price',
-                            legend_title='Legend')
+                            yaxis_title='Price')
+                st.plotly_chart(fig)
+                
 
-            # Add a hover mode to the figure
-            fig.update_layout(hovermode='x')
-
-            # Add a hover label to display the values of Close, lstm_pred, and gru_pred
-            fig.update_traces(hovertemplate='%{y}',
-                            customdata=np.column_stack((test_df['lstm_pred'], test_df['gru_pred'])))
-
-            # Display the figure in Streamlit
-            st.plotly_chart(fig)
-
-            # Calculate the MAPE for LSTM and GRU models
-            lstm_mape = np.mean(np.abs((test_df['Close'] - test_df['lstm_pred']) / test_df['Close'])) * 100
-            gru_mape = np.mean(np.abs((test_df['Close'] - test_df['gru_pred']) / test_df['Close'])) * 100
-
-            # st.write("LSTM model error percentage:", round(lstm_mape, 4), "%")
-            # st.write("GRU model error percentage:", round(gru_mape, 4), "%")
-            st.markdown(f"LSTM model error percentage: <span style='color: green; background-color: none;'>{round(lstm_mape, 4)}%</span>", unsafe_allow_html=True)
-            st.markdown(f"GRU model error percentage: <span style='color: red; background-color: none;'>{round(gru_mape, 4)}%</span>", unsafe_allow_html=True)
+            # total_days = (end - start).days
+            total_days = len(data)-5
+            selected_periods = st.slider("Periods (days)", 2, total_days, 20, help="Select the number of days to predict the stock price. (Default = 20 days)")
             
-            if lstm_mape < gru_mape:
-                st.write("**LSTM** model makes more accurate prediction compared to **GRU** model based on the model's error percentage.")
-            else:
-                st.write("**GRU** model makes more accurate prediction compared to **LSTM** model based on the model's error percentage.")
-            st.caption("Note: These error percentages are the deviation of the predicted price from the actual price.")
+            st.caption(f"Stock: :blue[{stock}]")
+            st.caption(f"Prediction date: :blue[{(test_df.index[5]).strftime('%d-%m-%Y')}] until :blue[{(test_df.index[4 + selected_periods]).strftime('%d-%m-%Y')}]")
+            
+            if st.button("Predict"):
+                # Display the prediction results
+                # Load the model based on the ticker
+                if ticker == "BBCA.JK":
+                    lstm_model = load_model("all_models/BBCA_LSTM_window_5.h5")
+                    gru_model = load_model("all_models/BBCA_GRU_window_5.h5")
+                elif ticker == "BBRI.JK":
+                    lstm_model = load_model("all_models/BBRI_LSTM_window_5.h5")
+                    gru_model = load_model("all_models/BBRI_GRU_window_5.h5")
+                elif ticker == "BMRI.JK":
+                    lstm_model = load_model("all_models/BMRI_LSTM_window_5.h5")
+                    gru_model = load_model("all_models/BMRI_GRU_window_5.h5")
 
-            time.sleep(3)
-            alert.empty()
+                # Make predictions using the loaded model
+                lstm_pred = lstm_model.predict(X_test[:selected_periods])
+                gru_pred = gru_model.predict(X_test[:selected_periods])
+                
+                test_df = test_df.iloc[5:selected_periods+5]
+
+                lstm_pred_df = pd.DataFrame(lstm_pred, columns=['lstm_pred'])
+                gru_pred_df = pd.DataFrame(gru_pred, columns=['gru_pred'])
+
+                test_df['lstm_pred'] = lstm_pred_df.values
+                test_df['gru_pred'] = gru_pred_df.values
+                test_df = test_df.dropna(subset=['lstm_pred'])
+
+                with st.spinner("Predicting..."):
+                    time.sleep(3)
+                alert = st.success("Prediction completed!")
+
+                # Create a Plotly figure
+                fig = go.Figure()
+                if selected_periods > 60:
+                    width = 1
+                elif selected_periods > 30:
+                    width = 1.5
+                else:
+                    width = 2
+                
+                fig.add_trace(go.Scatter(x=test_df.index, y=test_df['Close'], mode='lines', name='Actual Price', line=dict(color='black', width=width, dash='solid')))
+                fig.add_trace(go.Scatter(x=test_df.index, y=test_df['lstm_pred'], mode='lines', name='LSTM Prediction', line=dict(color='darkorange', width=width, dash='dashdot')))
+                fig.add_trace(go.Scatter(x=test_df.index, y=test_df['gru_pred'], mode='lines', name='GRU Prediction', line=dict(color='darkmagenta', width=width, dash='dot')))
+                
+                # Customize the layout
+                fig.update_layout(title='Price Prediction for {stock}'.format(stock=stock),
+                                xaxis_title='Date',
+                                yaxis_title='Price',
+                                legend_title='Legend')
+
+                # Add a hover mode to the figure
+                fig.update_layout(hovermode='x')
+
+                # Add a hover label to display the values of Close, lstm_pred, and gru_pred
+                fig.update_traces(hovertemplate='%{y}',
+                                customdata=np.column_stack((test_df['lstm_pred'], test_df['gru_pred'])))
+
+                # Display the figure in Streamlit
+                st.plotly_chart(fig)
+
+                # Calculate the MAPE for LSTM and GRU models
+                lstm_mape = np.mean(np.abs((test_df['Close'] - test_df['lstm_pred']) / test_df['Close'])) * 100
+                gru_mape = np.mean(np.abs((test_df['Close'] - test_df['gru_pred']) / test_df['Close'])) * 100
+
+                # st.markdown(f"LSTM model error percentage: <span style='color: green; background-color: none;'>{round(lstm_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using LSTM model and the price.")
+                # st.markdown(f"GRU model error percentage: <span style='color: red; background-color: none;'>{round(gru_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using GRU model and the price.")
+                # st.caption("Note: These error percentages are the deviation of the predicted price from the actual price.")
+
+                if lstm_mape < gru_mape:
+                    st.markdown(f"LSTM model error rate: <span style='color: green; background-color: none;'>{round(lstm_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using LSTM model and the price.")
+                    st.markdown(f"GRU model error rate: <span style='color: red; background-color: none;'>{round(gru_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using GRU model and the price.")
+                    st.write("**LSTM** model makes more accurate prediction compared to **GRU** model based on the model's error rate.")
+                
+                else:
+                    st.markdown(f"LSTM model error rate: <span style='color: red; background-color: none;'>{round(lstm_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using LSTM model and the price.")
+                    st.markdown(f"GRU model error rate: <span style='color: green; background-color: none;'>{round(gru_mape, 4)}%</span>", unsafe_allow_html=True, help="The price difference between price prediction using GRU model and the price.")
+                    st.write("**GRU** model makes more accurate prediction compared to **LSTM** model based on the model's error rate.")
+
+                time.sleep(3)
+                alert.empty()
