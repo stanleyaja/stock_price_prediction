@@ -63,21 +63,33 @@ def view_predict():
     # if 'ticker' not in st.session_state:
     #     st.session_state.selected_ticker = ""
 
-    # Get the user input for the stock ticker
-    selected_ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), help="Select the stock ticker to predict the stock price.")]
-    
     def button_ticker_visibility():
         st.session_state.ticker_selected = True
 
     if 'ticker_selected' not in st.session_state:
         st.session_state.ticker_selected = False
 
-    if not st.session_state.ticker_selected:
+    if 'selected_ticker' not in st.session_state:
+        st.session_state.selected_ticker = ""
+        selected_ticker = ""
+
+    # Get the user input for the stock ticker
+    temp_ticker = ticker_options[st.selectbox('Choose stock ticker', list(ticker_options.keys()), help="Select the stock ticker to predict the stock price.")]
+    # selected_ticker = temp_ticker
+
+    if temp_ticker != st.session_state.selected_ticker:
+        st.session_state.ticker_selected = False
+        if not st.session_state.ticker_selected:
+            selected_ticker = temp_ticker
         st.session_state.selected_ticker = selected_ticker
 
     if not st.session_state.ticker_selected:
         if st.button("Set Ticker", on_click=button_ticker_visibility):
             pass
+
+    # if not st.session_state.ticker_selected:
+    #     if st.button("Set Ticker"):
+    #         st.session_state.ticker_selected = True
 
     # Check if ticker is set in session state before proceeding
     if st.session_state.ticker_selected:
